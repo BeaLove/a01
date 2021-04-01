@@ -1,0 +1,249 @@
+from pathlib import Path
+from parse_dataset import Dataset
+import argparse
+
+class Parser: 
+    SH, LA, RA = 0,1,2
+
+    def conllu(self, source):
+        buffer = []
+        for line in source:
+            line = line.rstrip()    # strip off the trailing newline
+            if not line.startswith("#"):
+                if not line:
+                    yield buffer
+                    buffer = []
+                else:
+                    columns = line.split("\t")
+                    if columns[0].isdigit():    # skip range tokens
+                        buffer.append(columns)
+
+    def trees(self, source):
+        """
+        Reads trees from an input source.
+
+        Args: source: An iterable, such as a file pointer.
+
+        Yields: Triples of the form `words`, `tags`, heads where: `words`
+        is the list of words of the tree (including the pseudo-word
+        <ROOT> at position 0), `tags` is the list of corresponding
+        part-of-speech tags, and `heads` is the list of head indices
+        (one head index per word in the tree).
+        """
+        for rows in self.conllu(source):
+            words = ["<ROOT>"] + [row[1] for row in rows]
+            tags = ["<ROOT>"] + [row[3] for row in rows]
+            tree = [0] + [int(row[6]) for row in rows]
+            relations = ["root"] + [row[7] for row in rows]
+            yield words, tags, tree, relations
+
+
+    def step_by_step(self,string) :
+        """
+        Parses a string and builds a dependency tree. In each step,
+        the user needs to input the move to be made.
+        """
+        w = ("<ROOT> " + string).split()
+        i, stack, pred_tree = 0, [], [0]*len(w) # Input configuration
+        while True :
+            print( "----------------" )
+            print( "Buffer: ", w[i:] )
+            print( "Stack: ", [w[s] for s in stack] )
+            print( "Predicted tree: ", pred_tree )
+            try :
+                m = int(input( "Move (SH=0, LA=1, RA=2): " ))
+                if m not in self.valid_moves(i,stack,pred_tree) :
+                    print( "Illegal move" )
+                    continue
+            except :
+                print( "Illegal move" )
+                continue
+            i, stack, pred_tree = self.move(i,stack,pred_tree,m)
+            if i == len(w) and stack == [0] :
+                # Terminal configuration
+                print( "----------------" )
+                print( "Final predicted tree: ", pred_tree )
+                return
+
+    def create_dataset(self, source) :
+        """
+        Creates a dataset from all parser configurations encountered
+        during parsing of the training dataset.
+        (Not used in assignment 1).
+        """
+        ds = Dataset()
+        with open(source) as f:
+            for w,tags,tree,relations in self.trees(f): 
+                i, stack, pred_tree = 0, [], [0]*len(tree) # Input configuration
+                m = self.compute_correct_move(i,stack,pred_tree,tree)
+                while m != None :
+                    ds.add_datapoint(w, tags, i, stack, m, train)
+                    i,stack,pred_tree = self.move(i,stack,pred_tree,m)
+                    m = self.compute_correct_move(i,stack,pred_tree,tree)
+        return ds
+   
+
+
+    def valid_moves(self, i, stack, pred_tree):
+        """Returns the valid moves for the specified parser
+        configuration.
+        
+        Args:
+            i: The index of the first unprocessed word.
+            stack: The stack of words (represented by their indices)
+                that are currently being processed.
+            pred_tree: The partial dependency tree.
+        
+        Returns:
+            The list of valid moves for the specified parser
+                configuration.
+        """
+        moves = []
+        if i < len(pred_tree):
+            moves.append(0)
+        if len(stack) > 2:
+            moves.append(1)
+        if 1 < len(stack):
+            moves.append(2)
+
+        # YOUR CODE HERE
+
+        return moves
+
+        
+    def move(self, i, stack, pred_tree, move):
+        """
+        Executes a single move.
+        
+        Args:
+            i: The index of the first unprocessed word.
+            stack: The stack of words (represented by their indices)
+                that are currently being processed.
+            pred_tree: The partial dependency tree.
+            move: The move that the parser should make.
+        
+        Returns:
+            The new parser configuration, represented as a triple
+            containing the index of the new first unprocessed word,
+            stack, and partial dependency tree.
+        """
+
+        # YOUR CODE HERE
+        #print("i", i)
+        #print("stack ", stack)
+        #print("pred tree", pred_tree)
+        if move == 0:
+            #i+=1
+            stack.append(i)
+            i+=1
+        if move == 1:
+            dependent = stack[-2]
+            head = stack[-1]
+            pred_tree[dependent] = head
+            stack.pop(-2)
+        if move == 2:
+            dependent = stack[-1]
+            head = stack[-2]
+            pred_tree[dependent] = head
+            stack.pop(-1)
+        print("i in move", i)
+        print("stack in move ", stack)
+        return i, stack, pred_tree
+
+
+    def compute_correct_moves(self, tree):
+        """
+        Computes the sequence of moves (transformations) the parser 
+        must perform in order to produce the input tree.
+        """
+        i, stack, pred_tree = 0, [], [0]*len(tree) # Input configuration
+        moves = []
+        m = self.compute_correct_move(i,stack,pred_tree,tree)
+        #print("move", m)
+        while m != None :
+            moves.append(m)
+            print("moves ", moves)
+            i,stack,pred_tree = self.move(i,stack,pred_tree,m)
+            m = self.compute_correct_move(i,stack,pred_tree,tree)
+        return moves
+
+
+    def compute_correct_move(self, i,stack,pred_tree,correct_tree) :
+        """
+        Given a parser configuration (i,stack,pred_tree), and 
+        the correct final tree, this method computes the  correct 
+        move to do in that configuration.
+    
+        See the textbook, chapter 15, page 11. 
+        
+        Args:
+            i: The index of the first unprocessed word.
+            stack: The stack of words (represented by their indices)
+                that are currently being processed.
+            pred_tree: The partial dependency tree.
+            correct_tree: The correct dependency tree.
+        
+        Returns:
+            The correct move for the specified parser
+            configuration, or `None` if no move is possible.
+        """
+        assert len(pred_tree) == len(correct_tree)
+
+        # YOUR CODE HERE
+        #1, try left, else if try right, else do shift
+        #print("correct tree", correct_tree)
+        #1 try left arc from top of stack if that is a valid move
+        # (lookup correct tree by index of next word,
+        # if the content is index of current word, do move
+        #2 try right arc if top word doesnt appear later in the correct tree and
+        # 2nd word has current top word as
+        #3 else if do shift
+        #else return none
+        if i == (len(correct_tree)) and stack[-1] == 0:
+            return None
+        else:
+            if len(stack) > 1:
+                if stack[-1] == correct_tree[stack[-2]]:
+                    return 1 #leftarc
+                elif stack[-1] not in correct_tree[i:] and stack[-2] == correct_tree[stack[-1]]:
+                # checks: resulting head of
+                # current word (2nd word on stack) is the
+                # correct head, and that current word doesnt appear later in correct tree
+                    return 2
+                else:
+                    return 0
+            else:
+                return 0
+   
+
+  
+filename = Path("en-ud-train-projective.conllu")
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Transition-based dependency parser')
+    parser.add_argument('-s', '--step_by_step', type=str, help='step-by-step parsing of a string')
+    parser.add_argument('-m', '--compute_correct_moves', type=str, default=filename, help='compute the correct moves given a correct tree')
+    args = parser.parse_args()
+
+    p = Parser()
+    if args.step_by_step:
+        p.step_by_step( args.step_by_step )
+
+    elif args.compute_correct_moves:
+        myoutput = open("predicted_moves_new.conllu", "w")
+        ground_truth_file = open("correct_moves_en-ud-dev.conllu").read().split("\n")
+        #print(ground_truth_file)
+        #for truth in ground_truth:
+         #   print(truth)
+        with open(args.compute_correct_moves) as source:
+            for w,tags,tree,relations in p.trees(source):
+                correct_moves = p.compute_correct_moves(tree)
+                #print("correct moves", correct_moves)
+                myoutput.write(str(correct_moves))
+                myoutput.write("\n")
+                #break
+
+
+
+
+
