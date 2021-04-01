@@ -102,8 +102,9 @@ class CKY:
                         for key in self.binary_rules[b].keys():
                             if key in C:
                                 print("key in C", key)
-                                Cs.append(self.binary_rules[b][key][0])
-                            self.table[i][j] = Cs
+                                #Cs.append(self.binary_rules[b][key][0])
+                                self.table[i][j].append(self.binary_rules[b][key][0])
+                            #self.table[i][j] = Cs
 
         #
         #  YOUR CODE HERE
