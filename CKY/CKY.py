@@ -73,33 +73,37 @@ class CKY:
         print(self.binary_rules)
         print(self.words)
         #create table of right size
-        self.table = [[(i,j) for i in range(len(self.words))] for j in range(len(self.words))]
-        for t in self.table:
+        self.table = [[[] for j in range(len(self.words))] for i in range(len(self.words))]
+        ex_table = [[(i,j) for j in range(len(self.words))] for i in range(len(self.words))]
+        for t in ex_table:
             print(t)
         for j in range(len(self.words)):
             self.table[j][j] = self.unary_rules[self.words[j]]
             print("j", j)
-            for i in range(j,-1,-1):
+            for t in self.table:
+                print(t)
+            for i in range(j-1,-1,-1):
                 print("i", i)
-                for k in range(j-1, i):
-                    print("goal cell", self.table[i-1][j])
+                for k in range(i, j):
+                    print("goal cell", i, j, self.table[i][j])
                     print("k", k)
                     #print(self.table[i-1][k-1])
-                    B = self.table[k][j-1]
-                    C = self.table[i][k+1]
+                    B = self.table[i][k]
+                    C = self.table[k+1][j]
                     print("B", B)
                     print("C", C)
+                    Cs = []
                     for b in B:
                         print("b", b)
                         #Cs = [self.binary_rules[b].keys() in C]
-                        dict = self.binary_rules[b]
-                        #print(Cs)
-                        print(self.binary_rules[b])
-                        Cs = []
+                        #dict = self.binary_rules[b]
+                        print("Cs", Cs)
+                        #print(self.binary_rules[b])
                         for key in self.binary_rules[b].keys():
                             if key in C:
-                                Cs.append(dict[key])
-                            self.table[i-1][j] = Cs
+                                print("key in C", key)
+                                Cs.append(self.binary_rules[b][key][0])
+                            self.table[i][j] = Cs
 
         #
         #  YOUR CODE HERE
