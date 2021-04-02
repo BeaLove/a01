@@ -154,8 +154,6 @@ class CKY:
                     string = symbol + "(" + string + ")"
                 elif idx == 0:
                     string = symbol + "(" + string
-
-            string
         return string
         pass
 
@@ -179,6 +177,7 @@ def main() :
     if arguments.print_trees :
         cky.print_trees( len(cky.words)-1, 0, arguments.symbol )
     string = cky.print_trees(0, 3, 'S')
+    string = 'S' + "(" + string
     print(string)
 if __name__ == '__main__' :
     main()    
