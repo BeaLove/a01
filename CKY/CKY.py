@@ -72,6 +72,7 @@ class CKY:
         print(self.unary_rules)
         print(self.binary_rules)
         print(self.words)
+        self.backptr = {}
         #create table of right size
         self.table = [[[] for j in range(len(self.words))] for i in range(len(self.words))]
         ex_table = [[(i,j) for j in range(len(self.words))] for i in range(len(self.words))]
@@ -99,11 +100,14 @@ class CKY:
                         #dict = self.binary_rules[b]
                         print("Cs", Cs)
                         #print(self.binary_rules[b])
-                        for key in self.binary_rules[b].keys():
-                            if key in C:
-                                print("key in C", key)
+                        for c in self.binary_rules[b].keys():
+                            if c in C:
+                                print("key in C", c)
                                 #Cs.append(self.binary_rules[b][key][0])
-                                self.table[i][j].append(self.binary_rules[b][key][0])
+                                symbol = self.binary_rules[b][c][0]
+                                self.table[i][j].append(self.binary_rules[b][c][0])
+                                key = (symbol, i, j)
+                                self.backptr[key] = [(b, i, k), (c, k+1, j)]
                             #self.table[i][j] = Cs
 
         #
@@ -119,14 +123,40 @@ class CKY:
         #print( t.table )
         for row in self.table:
             print(row)
+        print(self.backptr)
 
 
     # Prints all parse trees derivable from cell in row 'row' and
     # column 'column', rooted with the symbol 'symbol'
-    def print_trees( self, row, column, symbol ) :
+    def print_trees( self, row, column, symbol, string='') :
         #
         #  YOUR CODE HERE
         #
+        key = (symbol, row, column)
+
+        if key not in self.backptr.keys():
+            print("row", row)
+            print(str(symbol) + "(" + self.words[row] + ")")
+            string = self.words[row] + ")" + string
+            #return string
+            #print(str)
+        else:
+            children = self.backptr[key]
+            #string += symbol + "(" + string
+            for idx, child in enumerate(reversed(children)):
+                #child_str = symbol + "(" + self.words[row] + ")"
+                #string += child_str
+                print(row, column, symbol)
+                print("idx", idx)
+                symbol, row, column = child
+                string = self.print_trees(row, column, symbol, string)
+                if idx == 1:
+                    string = symbol + "(" + string + ")"
+                elif idx == 0:
+                    string = symbol + "(" + string
+
+            string
+        return string
         pass
 
 
@@ -148,8 +178,8 @@ def main() :
         cky.print_table()
     if arguments.print_trees :
         cky.print_trees( len(cky.words)-1, 0, arguments.symbol )
-    
-
+    string = cky.print_trees(0, 3, 'S')
+    print(string)
 if __name__ == '__main__' :
     main()    
 
